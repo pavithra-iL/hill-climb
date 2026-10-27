@@ -9,12 +9,19 @@ from __future__ import annotations
 
 import argparse
 
+from annealing import anneal
 from hill_climb import hill_climb, random_restart_hill_climb
 from objectives import OBJECTIVES
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run a hill climbing optimizer.")
+    parser.add_argument(
+        "--algorithm",
+        choices=("hill-climb", "anneal"),
+        default="hill-climb",
+        help="Search strategy to use.",
+    )
     parser.add_argument(
         "--objective",
         choices=sorted(OBJECTIVES),
@@ -50,7 +57,16 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     objective = OBJECTIVES[args.objective]
 
-    if args.restarts > 0:
+    if args.algorithm == "anneal":
+        result = anneal(
+            objective,
+            start=args.start,
+            bounds=tuple(args.bounds),
+            max_iterations=max(args.max_iterations, 10_000),
+            seed=args.seed,
+        )
+        mode = "simulated annealing"
+    elif args.restarts > 0:
         result = random_restart_hill_climb(
             objective,
             bounds=tuple(args.bounds),
@@ -69,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         mode = f"basic from {args.start}"
 
-    print(f"objective={args.objective} ({mode})")
+    print(f"objective={args.objective} algorithm={args.algorithm} ({mode})")
     print(f"  x         = {result.x:.6f}")
     print(f"  value     = {result.value:.6f}")
     print(f"  iterations= {result.iterations}")
